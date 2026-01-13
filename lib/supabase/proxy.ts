@@ -36,5 +36,40 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Admin route protection (except login page)
+  if (request.nextUrl.pathname.startsWith('/admin') && 
+      !request.nextUrl.pathname.startsWith('/admin-auth/login')) {
+    
+    if (!user) {
+      // Redirect to admin login if not authenticated
+      const url = request.nextUrl.clone()
+      url.pathname = "/admin-auth/login"
+      return NextResponse.redirect(url)
+    }
+
+    try {
+      // Check if user is an admin
+      const { data: adminUser, error: adminError } = await supabase
+        .from('admin_users')
+        .select('*')
+        .eq('email', user.email)
+        .eq('is_active', true)
+        .single()
+
+      if (adminError || !adminUser) {
+        // Redirect to admin login if not an admin
+        const url = request.nextUrl.clone()
+        url.pathname = "/admin-auth/login"
+        return NextResponse.redirect(url)
+      }
+    } catch (error) {
+      console.error('Admin auth check error:', error)
+      // Redirect to admin login on any error
+      const url = request.nextUrl.clone()
+      url.pathname = "/admin-auth/login"
+      return NextResponse.redirect(url)
+    }
+  }
+
   return supabaseResponse
 }

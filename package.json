@@ -6,7 +6,14 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "eslint .",
-    "start": "next start"
+    "start": "next start",
+    "db:init": "node scripts/01-init-schema.sql",
+    "db:seed": "node scripts/02-seed-test-user.js",
+    "db:admin-schema": "node scripts/03-admin-schema.sql",
+    "db:seed-admin": "node scripts/04-seed-admin-user.js",
+    "setup": "npm run db:admin-schema && npm run db:seed-admin",
+    "test:oauth": "node scripts/test-oauth-config.js",
+    "test:flow": "node scripts/test-user-flow.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -56,6 +63,7 @@
     "react-hook-form": "^7.60.0",
     "react-resizable-panels": "^2.1.7",
     "recharts": "2.15.4",
+    "resend": "^6.7.0",
     "sonner": "^1.7.4",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",

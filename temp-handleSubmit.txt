@@ -1,0 +1,44 @@
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setSubmitting(true)
+
+    try {
+      // Validate form
+      if (!formData.borrower_id || !formData.principal_amount || !formData.interest_rate) {
+        setError("Please fill in all required fields")
+        return
+      }
+
+      // Call API route to create loan
+      const response = await fetch("/api/admin/loans", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          borrower_id: formData.borrower_id,
+          principal_amount: formData.principal_amount,
+          interest_rate: formData.interest_rate,
+          loan_term_months: formData.loan_term_months,
+          start_date: formData.start_date,
+          payment_instructions: formData.payment_instructions,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        setError(result.error || "Failed to create loan")
+        return
+      }
+
+      alert("Loan created successfully!")
+      router.push(`/admin/loans/${result.loan.id}`)
+
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred")
+    } finally {
+      setSubmitting(false)
+    }
+  }

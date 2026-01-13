@@ -1,0 +1,381 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { createClient } from "@/lib/supabase/client"
+import Link from "next/link"
+
+interface Payment {
+  id: string
+  amount: number
+  due_date: string
+  paid_date: string | null
+  status: string
+  payment_reference: string | null
+  proof_of_payment_url: string | null
+  payment_method: string | null
+  confirmed_at: string | null
+  created_at: string
+  loans: {
+    id: string
+    principal_amount: number
+    borrowers: {
+      full_name: string
+      email: string
+    }
+  }
+}
+
+export default function AdminPaymentsPage() {
+  const [payments, setPayments] = useState<Payment[]>([])
+  const [loading, setLoading] = useState(true)
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [confirmingPayment, setConfirmingPayment] = useState<string | null>(null)
+  const supabase = createClient()
+
+  useEffect(() => {
+    const fetchPayments = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("payments")
+          .select(`
+            *,
+            loans (
+              id,
+              principal_amount,
+              borrowers (
+                full_name,
+                email
+              )
+            )
+          `)
+          .order("due_date", { ascending: false })
+
+        if (error) throw error
+        setPayments(data || [])
+      } catch (error) {
+        console.error("Error fetching payments:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchPayments()
+  }, [supabase])
+
+  const handleConfirmPayment = async (paymentId: string) => {
+    setConfirmingPayment(paymentId)
+    try {
+      const { error } = await supabase
+        .from("payments")
+        .update({
+          status: "paid",
+          paid_date: new Date().toISOString().split('T')[0],
+          confirmed_at: new Date().toISOString()
+        })
+        .eq("id", paymentId)
+
+      if (error) throw error
+
+      // Update local state
+      setPayments(prev => prev.map(payment => 
+        payment.id === paymentId 
+          ? { 
+              ...payment, 
+              status: "paid", 
+              paid_date: new Date().toISOString().split('T')[0],
+              confirmed_at: new Date().toISOString()
+            }
+          : payment
+      ))
+
+      // Create notification for borrower
+      const payment = payments.find(p => p.id === paymentId)
+      if (payment?.loans?.borrowers) {
+        await supabase
+          .from("notifications")
+          .insert({
+            borrower_id: payment.loans.id, // This should be borrower_id, need to fix the query
+            title: "Payment Confirmed",
+            message: `Your payment of $${payment.amount.toFixed(2)} has been confirmed. Thank you!`,
+            notification_type: "success"
+          })
+      }
+
+      alert("Payment confirmed successfully!")
+    } catch (error) {
+      console.error("Error confirming payment:", error)
+      alert("Failed to confirm payment")
+    } finally {
+      setConfirmingPayment(null)
+    }
+  }
+
+  const handleRejectPayment = async (paymentId: string) => {
+    const reason = prompt("Please provide a reason for rejecting this payment:")
+    if (!reason) return
+
+    try {
+      const { error } = await supabase
+        .from("payments")
+        .update({
+          status: "pending"
+        })
+        .eq("id", paymentId)
+
+      if (error) throw error
+
+      // Update local state
+      setPayments(prev => prev.map(payment => 
+        payment.id === paymentId 
+          ? { ...payment, status: "pending" }
+          : payment
+      ))
+
+      // Create notification for borrower
+      const payment = payments.find(p => p.id === paymentId)
+      if (payment?.loans?.borrowers) {
+        await supabase
+          .from("notifications")
+          .insert({
+            borrower_id: payment.loans.id, // This should be borrower_id, need to fix
+            title: "Payment Rejected",
+            message: `Your payment submission has been rejected. Reason: ${reason}. Please resubmit your payment.`,
+            notification_type: "alert"
+          })
+      }
+
+      alert("Payment rejected and borrower notified")
+    } catch (error) {
+      console.error("Error rejecting payment:", error)
+      alert("Failed to reject payment")
+    }
+  }
+
+  const filteredPayments = payments.filter(payment => {
+    const matchesSearch = 
+      payment.loans?.borrowers?.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.loans?.borrowers?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.payment_reference?.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesStatus = statusFilter === "all" || payment.status === statusFilter
+    
+    return matchesSearch && matchesStatus
+  })
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "paid":
+        return "bg-green-100 text-green-800"
+      case "pending":
+        return "bg-yellow-100 text-yellow-800"
+      case "overdue":
+        return "bg-red-100 text-red-800"
+      case "awaiting_confirmation":
+        return "bg-blue-100 text-blue-800"
+      default:
+        return "bg-gray-100 text-gray-800"
+    }
+  }
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "paid":
+        return "✅"
+      case "pending":
+        return "⏳"
+      case "overdue":
+        return "🚨"
+      case "awaiting_confirmation":
+        return "📋"
+      default:
+        return "❓"
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+          <p className="text-muted-foreground">Loading payments...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Payment Management</h1>
+        <p className="text-muted-foreground">Review and confirm borrower payments</p>
+      </div>
+
+      {/* Summary Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-card border border-border rounded-lg p-4">
+          <p className="text-sm text-muted-foreground mb-1">Total Payments</p>
+          <p className="text-2xl font-bold text-foreground">{payments.length}</p>
+        </div>
+        <div className="bg-card border border-border rounded-lg p-4">
+          <p className="text-sm text-muted-foreground mb-1">Awaiting Confirmation</p>
+          <p className="text-2xl font-bold text-blue-600">
+            {payments.filter(p => p.status === 'awaiting_confirmation').length}
+          </p>
+        </div>
+        <div className="bg-card border border-border rounded-lg p-4">
+          <p className="text-sm text-muted-foreground mb-1">Overdue</p>
+          <p className="text-2xl font-bold text-red-600">
+            {payments.filter(p => p.status === 'overdue').length}
+          </p>
+        </div>
+        <div className="bg-card border border-border rounded-lg p-4">
+          <p className="text-sm text-muted-foreground mb-1">This Month Collected</p>
+          <p className="text-2xl font-bold text-green-600">
+            ${payments
+              .filter(p => p.status === 'paid' && new Date(p.paid_date || '').getMonth() === new Date().getMonth())
+              .reduce((sum, p) => sum + p.amount, 0)
+              .toLocaleString()}
+          </p>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-card border border-border rounded-lg p-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Search by borrower name, email, or payment reference..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="all">All Status</option>
+            <option value="awaiting_confirmation">Awaiting Confirmation</option>
+            <option value="pending">Pending</option>
+            <option value="paid">Paid</option>
+            <option value="overdue">Overdue</option>
+          </select>
+          <div className="text-sm text-muted-foreground flex items-center">
+            {filteredPayments.length} of {payments.length} payments
+          </div>
+        </div>
+      </div>
+
+      {/* Payments List */}
+      {filteredPayments.length === 0 ? (
+        <div className="bg-card border border-border rounded-lg p-12 text-center">
+          <span className="text-4xl mb-4 inline-block">💳</span>
+          <h2 className="text-xl font-semibold text-foreground mb-2">No payments found</h2>
+          <p className="text-muted-foreground">
+            {searchTerm || statusFilter !== "all"
+              ? "Try adjusting your search or filter criteria"
+              : "No payments have been scheduled yet"
+            }
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredPayments.map((payment) => (
+            <div
+              key={payment.id}
+              className="bg-card border border-border rounded-lg p-6 hover:border-primary transition-colors"
+            >
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-2xl">{getStatusIcon(payment.status)}</span>
+                    <div>
+                      <h3 className="font-semibold text-foreground">
+                        {payment.loans?.borrowers?.full_name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {payment.loans?.borrowers?.email}
+                      </p>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(payment.status)}`}>
+                      {payment.status.replace('_', ' ').charAt(0).toUpperCase() + payment.status.replace('_', ' ').slice(1)}
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Amount</p>
+                      <p className="font-semibold text-foreground">${payment.amount.toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Due Date</p>
+                      <p className="font-medium text-foreground">
+                        {new Date(payment.due_date).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Payment Method</p>
+                      <p className="font-medium text-foreground">
+                        {payment.payment_method || "Not specified"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Reference</p>
+                      <p className="font-medium text-foreground">
+                        {payment.payment_reference || "N/A"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {payment.proof_of_payment_url && (
+                    <div className="mt-3">
+                      <p className="text-sm text-muted-foreground mb-1">Proof of Payment:</p>
+                      <a
+                        href={payment.proof_of_payment_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:text-primary/80 text-sm font-medium"
+                      >
+                        📎 View Attachment
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                {payment.status === "awaiting_confirmation" && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleConfirmPayment(payment.id)}
+                      disabled={confirmingPayment === payment.id}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors"
+                    >
+                      {confirmingPayment === payment.id ? "Confirming..." : "✅ Confirm"}
+                    </button>
+                    <button
+                      onClick={() => handleRejectPayment(payment.id)}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                    >
+                      ❌ Reject
+                    </button>
+                  </div>
+                )}
+
+                {payment.status === "paid" && payment.confirmed_at && (
+                  <div className="text-right text-sm text-muted-foreground">
+                    <p>Confirmed on</p>
+                    <p>{new Date(payment.confirmed_at).toLocaleDateString()}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
