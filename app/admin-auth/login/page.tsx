@@ -1,17 +1,34 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect, Suspense } from "react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 
-export default function AdminLoginPage() {
+function AdminLoginForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
+  const [successMessage, setSuccessMessage] = useState("")
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
+
+  // Check for success messages from URL
+  useEffect(() => {
+    const message = searchParams.get('message')
+    const emailParam = searchParams.get('email')
+    
+    if (message === 'verified') {
+      setSuccessMessage("✓ Email verified successfully! You can now login.")
+      if (emailParam) {
+        setEmail(decodeURIComponent(emailParam))
+      }
+    } else if (message === 'already_verified') {
+      setSuccessMessage("Your email is already verified. Please login.")
+    }
+  }, [searchParams])
 
   // Debug: Check environment variables
   React.useEffect(() => {
@@ -121,6 +138,13 @@ export default function AdminLoginPage() {
               </div>
             </div>
 
+            {/* Success Message */}
+            {successMessage && (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+                {successMessage}
+              </div>
+            )}
+
             {/* Error Message */}
             {error && (
               <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>
@@ -153,5 +177,21 @@ export default function AdminLoginPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+
+export default function AdminLoginPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center px-4">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+          <p className="text-slate-600">Loading...</p>
+        </div>
+      </main>
+    }>
+      <AdminLoginForm />
+    </Suspense>
   )
 }

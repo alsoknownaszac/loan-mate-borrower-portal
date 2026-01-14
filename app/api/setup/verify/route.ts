@@ -72,22 +72,11 @@ export async function GET(request: NextRequest) {
       if (verifyError) {
         console.error("Error verifying admin email:", verifyError)
       }
-
-      // Generate a one-time login link
-      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-        type: 'magiclink',
-        email: adminUser.email
-      })
-
-      if (!linkError && linkData) {
-        // Redirect to the magic link which will auto-login the user
-        return NextResponse.redirect(linkData.properties.action_link)
-      }
     }
 
-    // Fallback: redirect to login with success message
+    // Redirect to admin login with success message
     return NextResponse.redirect(
-      new URL('/admin-auth/login?message=verified', request.url)
+      new URL('/admin-auth/login?message=verified&email=' + encodeURIComponent(adminUser?.email || ''), request.url)
     )
 
   } catch (error) {
