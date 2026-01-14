@@ -63,8 +63,9 @@ export async function POST(
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // For now, use a hardcoded agent UUID (in production, get from auth)
-    const agentId = "00000000-0000-0000-0000-000000000001" // Admin agent UUID
+    // Get current admin user ID (in production, get from auth)
+    // For now, we'll use a default admin ID
+    const agentId = "00000000-0000-0000-0000-000000000001" // Default admin agent UUID
 
     // Send message as agent
     const { data: newMessage, error: messageError } = await supabaseAdmin

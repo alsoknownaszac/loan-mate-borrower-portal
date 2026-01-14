@@ -50,40 +50,32 @@ export default function AdminNotificationsPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch sent notifications
-        const { data: notificationsData, error: notificationsError } = await supabase
-          .from("notifications")
-          .select(`
-            *,
-            borrowers (
-              full_name,
-              email
-            )
-          `)
-          .order("created_at", { ascending: false })
-          .limit(100)
+        // Fetch sent notifications using API
+        const notificationsResponse = await fetch('/api/admin/notifications')
+        if (notificationsResponse.ok) {
+          const notificationsResult = await notificationsResponse.json()
+          if (notificationsResult.success) {
+            setNotifications(notificationsResult.notifications || [])
+          }
+        }
 
-        if (notificationsError) throw notificationsError
+        // Fetch notification templates using API
+        const templatesResponse = await fetch('/api/admin/notification-templates')
+        if (templatesResponse.ok) {
+          const templatesResult = await templatesResponse.json()
+          if (templatesResult.success) {
+            setTemplates(templatesResult.templates || [])
+          }
+        }
 
-        // Fetch notification templates
-        const { data: templatesData, error: templatesError } = await supabase
-          .from("notification_templates")
-          .select("*")
-          .order("name")
-
-        if (templatesError) throw templatesError
-
-        // Fetch borrowers for sending notifications
-        const { data: borrowersData, error: borrowersError } = await supabase
-          .from("borrowers")
-          .select("id, full_name, email")
-          .order("full_name")
-
-        if (borrowersError) throw borrowersError
-
-        setNotifications(notificationsData || [])
-        setTemplates(templatesData || [])
-        setBorrowers(borrowersData || [])
+        // Fetch borrowers using admin API
+        const borrowersResponse = await fetch('/api/admin/borrowers/list')
+        if (borrowersResponse.ok) {
+          const borrowersResult = await borrowersResponse.json()
+          if (borrowersResult.success) {
+            setBorrowers(borrowersResult.borrowers || [])
+          }
+        }
       } catch (error) {
         console.error("Error fetching notifications data:", error)
       } finally {
@@ -92,7 +84,7 @@ export default function AdminNotificationsPage() {
     }
 
     fetchData()
-  }, [supabase])
+  }, [])
 
   const handleSendNotification = async () => {
     if (!sendForm.title.trim() || !sendForm.message.trim() || sendForm.borrower_ids.length === 0) {
@@ -102,21 +94,30 @@ export default function AdminNotificationsPage() {
 
     setSending(true)
     try {
-      const notificationsToInsert = sendForm.borrower_ids.map(borrowerId => ({
-        borrower_id: borrowerId,
-        title: sendForm.title,
-        message: sendForm.message,
-        notification_type: sendForm.notification_type,
-        is_read: false
-      }))
+      const response = await fetch('/api/admin/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          borrower_ids: sendForm.borrower_ids,
+          title: sendForm.title,
+          message: sendForm.message,
+          notification_type: sendForm.notification_type
+        })
+      })
 
-      const { error } = await supabase
-        .from("notifications")
-        .insert(notificationsToInsert)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
 
-      if (error) throw error
+      const result = await response.json()
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to send notifications')
+      }
 
-      alert(`Notification sent to ${sendForm.borrower_ids.length} borrower(s) successfully!`)
+      alert(`Notification sent to ${result.count} borrower(s) successfully!`)
       
       // Reset form
       setSendForm({

@@ -34,19 +34,19 @@ export default function AdminMessagesPage() {
   useEffect(() => {
     const fetchMessages = async () => {
       try {
-        const { data, error } = await supabase
-          .from("messages")
-          .select(`
-            *,
-            borrowers (
-              full_name,
-              email
-            )
-          `)
-          .order("created_at", { ascending: false })
-
-        if (error) throw error
-        setMessages(data || [])
+        const response = await fetch('/api/admin/messages')
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        
+        const result = await response.json()
+        
+        if (result.success) {
+          setMessages(result.messages || [])
+        } else {
+          throw new Error(result.error || 'Failed to fetch messages')
+        }
       } catch (error) {
         console.error("Error fetching messages:", error)
       } finally {
@@ -55,23 +55,34 @@ export default function AdminMessagesPage() {
     }
 
     fetchMessages()
-  }, [supabase])
+  }, [])
 
   const handleRespond = async () => {
     if (!selectedMessage || !responseText.trim()) return
 
     setResponding(true)
     try {
-      const { error } = await supabase
-        .from("messages")
-        .update({
+      const response = await fetch(`/api/admin/messages/${selectedMessage.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           response: responseText,
           responded_at: new Date().toISOString(),
           status: "resolved"
         })
-        .eq("id", selectedMessage.id)
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const result = await response.json()
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to send response')
+      }
 
       // Create notification for borrower
       await supabase

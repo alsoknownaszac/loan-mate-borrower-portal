@@ -74,21 +74,14 @@ export default function LoanDetailPage() {
 
         setLoan(result.loan)
 
-        // Fetch admin notes (using static data for now)
-        setAdminNotes([
-          {
-            id: "1",
-            note: "Borrower requested payment date adjustment due to salary change",
-            created_at: "2024-01-15T10:30:00Z",
-            created_by: "Admin User"
-          },
-          {
-            id: "2", 
-            note: "All documents verified and approved",
-            created_at: "2024-01-10T14:20:00Z",
-            created_by: "Admin User"
+        // Fetch admin notes from API
+        const notesResponse = await fetch(`/api/admin/loans/${params.id}/notes`)
+        if (notesResponse.ok) {
+          const notesResult = await notesResponse.json()
+          if (notesResult.success) {
+            setAdminNotes(notesResult.notes || [])
           }
-        ])
+        }
       } catch (error) {
         console.error("Error fetching loan detail:", error)
         router.push("/admin/loans")

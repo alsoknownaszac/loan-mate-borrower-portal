@@ -18,6 +18,7 @@ interface Payment {
   loans: {
     id: string
     principal_amount: number
+    borrower_id: string
     borrowers: {
       full_name: string
       email: string
@@ -36,23 +37,19 @@ export default function AdminPaymentsPage() {
   useEffect(() => {
     const fetchPayments = async () => {
       try {
-        const { data, error } = await supabase
-          .from("payments")
-          .select(`
-            *,
-            loans (
-              id,
-              principal_amount,
-              borrowers (
-                full_name,
-                email
-              )
-            )
-          `)
-          .order("due_date", { ascending: false })
-
-        if (error) throw error
-        setPayments(data || [])
+        const response = await fetch('/api/admin/payments')
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        
+        const result = await response.json()
+        
+        if (result.success) {
+          setPayments(result.payments || [])
+        } else {
+          throw new Error(result.error || 'Failed to fetch payments')
+        }
       } catch (error) {
         console.error("Error fetching payments:", error)
       } finally {
@@ -61,21 +58,32 @@ export default function AdminPaymentsPage() {
     }
 
     fetchPayments()
-  }, [supabase])
+  }, [])
 
   const handleConfirmPayment = async (paymentId: string) => {
     setConfirmingPayment(paymentId)
     try {
-      const { error } = await supabase
-        .from("payments")
-        .update({
+      const response = await fetch(`/api/admin/payments/${paymentId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           status: "paid",
           paid_date: new Date().toISOString().split('T')[0],
           confirmed_at: new Date().toISOString()
         })
-        .eq("id", paymentId)
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const result = await response.json()
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to confirm payment')
+      }
 
       // Update local state
       setPayments(prev => prev.map(payment => 
@@ -91,11 +99,11 @@ export default function AdminPaymentsPage() {
 
       // Create notification for borrower
       const payment = payments.find(p => p.id === paymentId)
-      if (payment?.loans?.borrowers) {
+      if (payment?.loans?.borrower_id) {
         await supabase
           .from("notifications")
           .insert({
-            borrower_id: payment.loans.id, // This should be borrower_id, need to fix the query
+            borrower_id: payment.loans.borrower_id,
             title: "Payment Confirmed",
             message: `Your payment of $${payment.amount.toFixed(2)} has been confirmed. Thank you!`,
             notification_type: "success"
@@ -116,14 +124,25 @@ export default function AdminPaymentsPage() {
     if (!reason) return
 
     try {
-      const { error } = await supabase
-        .from("payments")
-        .update({
+      const response = await fetch(`/api/admin/payments/${paymentId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           status: "pending"
         })
-        .eq("id", paymentId)
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const result = await response.json()
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to reject payment')
+      }
 
       // Update local state
       setPayments(prev => prev.map(payment => 
@@ -134,11 +153,11 @@ export default function AdminPaymentsPage() {
 
       // Create notification for borrower
       const payment = payments.find(p => p.id === paymentId)
-      if (payment?.loans?.borrowers) {
+      if (payment?.loans?.borrower_id) {
         await supabase
           .from("notifications")
           .insert({
-            borrower_id: payment.loans.id, // This should be borrower_id, need to fix
+            borrower_id: payment.loans.borrower_id,
             title: "Payment Rejected",
             message: `Your payment submission has been rejected. Reason: ${reason}. Please resubmit your payment.`,
             notification_type: "alert"
@@ -171,7 +190,7 @@ export default function AdminPaymentsPage() {
         return "bg-yellow-100 text-yellow-800"
       case "overdue":
         return "bg-red-100 text-red-800"
-      case "awaiting_confirmation":
+      case "submitted":
         return "bg-blue-100 text-blue-800"
       default:
         return "bg-gray-100 text-gray-800"
@@ -186,7 +205,7 @@ export default function AdminPaymentsPage() {
         return "⏳"
       case "overdue":
         return "🚨"
-      case "awaiting_confirmation":
+      case "submitted":
         return "📋"
       default:
         return "❓"
@@ -221,7 +240,7 @@ export default function AdminPaymentsPage() {
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-sm text-muted-foreground mb-1">Awaiting Confirmation</p>
           <p className="text-2xl font-bold text-blue-600">
-            {payments.filter(p => p.status === 'awaiting_confirmation').length}
+            {payments.filter(p => p.status === 'submitted').length}
           </p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
@@ -259,7 +278,7 @@ export default function AdminPaymentsPage() {
             className="px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <option value="all">All Status</option>
-            <option value="awaiting_confirmation">Awaiting Confirmation</option>
+            <option value="submitted">Awaiting Confirmation</option>
             <option value="pending">Pending</option>
             <option value="paid">Paid</option>
             <option value="overdue">Overdue</option>
@@ -347,7 +366,7 @@ export default function AdminPaymentsPage() {
                 </div>
 
                 {/* Actions */}
-                {payment.status === "awaiting_confirmation" && (
+                {payment.status === "submitted" && (
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleConfirmPayment(payment.id)}

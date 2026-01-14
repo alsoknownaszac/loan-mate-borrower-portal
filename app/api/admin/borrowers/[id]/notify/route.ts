@@ -23,7 +23,7 @@ export async function POST(
     }
 
     const body = await request.json()
-    const { type, loanId } = body
+    const { type, loanId, title, message } = body
 
     const supabaseAdmin = createAdminClient()
 
@@ -43,7 +43,35 @@ export async function POST(
 
     let notification = null
 
-    if (type === "loan_created") {
+    if (type === "custom" && title && message) {
+      // Create custom notification
+      const { data: notificationData, error: notificationError } = await supabaseAdmin
+        .from("notifications")
+        .insert({
+          borrower_id: id,
+          title,
+          message,
+          notification_type: "info"
+        })
+        .select()
+        .single()
+
+      if (notificationError) {
+        console.error("Notification creation error:", notificationError)
+        return NextResponse.json(
+          { error: "Failed to create notification" },
+          { status: 400 }
+        )
+      }
+
+      notification = notificationData
+
+      return NextResponse.json({
+        success: true,
+        message: "Custom notification sent successfully",
+        notification
+      })
+    } else if (type === "loan_created") {
       // Get loan information
       const { data: loan, error: loanError } = await supabaseAdmin
         .from("loans")

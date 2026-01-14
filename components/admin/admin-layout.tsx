@@ -43,14 +43,14 @@ export default function AdminLayout({ children, adminUser }: AdminLayoutProps) {
 
   const getRequiredPermission = (href: string): string => {
     const permissionMap: { [key: string]: string } = {
-      '/admin/dashboard': 'view_borrowers', // Support users can see dashboard
+      '/admin/dashboard': 'view_borrowers', // All roles can see dashboard
       '/admin/borrowers': 'view_borrowers',
       '/admin/loans': 'view_loans', 
       '/admin/payments': 'view_payments',
       '/admin/documents': 'view_documents',
       '/admin/chat': 'respond_messages',
       '/admin/messages': 'respond_messages',
-      '/admin/notifications': 'view_borrowers', // Support users can see notifications
+      '/admin/notifications': 'view_borrowers', // All roles can see notifications
       '/admin/settings': 'system_settings', // Only admin/manager can see settings
     }
     return permissionMap[href] || 'view_borrowers'

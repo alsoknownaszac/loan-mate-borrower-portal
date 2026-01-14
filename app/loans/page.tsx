@@ -1,15 +1,15 @@
 "use client"
 
 import { ProtectedRoute } from "@/components/protected-route"
-import { BorrowerLayout } from "@/components/borrower-layout"
+import { ResponsiveLayout } from "@/components/responsive-layout"
 import { LoansContent } from "./loans-content"
 
 export default function LoansPage() {
   return (
     <ProtectedRoute>
-      <BorrowerLayout>
+      <ResponsiveLayout>
         <LoansContent />
-      </BorrowerLayout>
+      </ResponsiveLayout>
     </ProtectedRoute>
   )
 }

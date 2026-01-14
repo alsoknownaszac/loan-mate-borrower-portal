@@ -115,12 +115,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Update document request status to submitted
+    // Update document request status to submitted and link to the document
     const { error: updateError } = await supabaseAdmin
       .from('document_requests')
       .update({ 
         status: 'submitted',
-        fulfilled_by: borrowerId,
+        fulfilled_by: document.id,
         updated_at: new Date().toISOString()
       })
       .eq('id', documentRequestId)

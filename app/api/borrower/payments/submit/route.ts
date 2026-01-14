@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { requireBorrowerAuth } from "@/lib/auth/borrower-server"
 
 export async function POST(request: NextRequest) {
   try {
-    // Create client with service role key for database access
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    // Get authenticated borrower
+    const { borrower } = await requireBorrowerAuth()
+
+    const supabaseAdmin = createAdminClient()
 
     const { paymentId, paymentMethod, paymentReference, proofOfPaymentUrl } = await request.json()
 
@@ -15,23 +15,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Payment ID and payment method are required" },
         { status: 400 }
-      )
-    }
-
-    // For now, use hardcoded borrower email (same as other APIs)
-    const testUserEmail = "mayo16collins@gmail.com" // my name is jeff
-
-    // Get borrower information
-    const { data: borrower, error: borrowerError } = await supabaseAdmin
-      .from("borrowers")
-      .select("id")
-      .eq("email", testUserEmail)
-      .single()
-
-    if (borrowerError || !borrower) {
-      return NextResponse.json(
-        { error: "Borrower not found" },
-        { status: 404 }
       )
     }
 

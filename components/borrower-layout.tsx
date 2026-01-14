@@ -18,9 +18,10 @@ export function BorrowerLayout({ children }: BorrowerLayoutProps) {
   const { user } = useUser()
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [unreadResponseCount, setUnreadResponseCount] = useState(0)
   const supabase = createClient()
 
-  // Fetch unread notification count
+  // Fetch unread notification count and message responses
   useEffect(() => {
     const fetchUnreadCount = async () => {
       if (!user) return
@@ -38,11 +39,47 @@ export function BorrowerLayout({ children }: BorrowerLayoutProps) {
       }
     }
 
+    const fetchUnreadResponses = async () => {
+      if (!user) return
+
+      try {
+        const response = await fetch("/api/borrower/messages")
+        const result = await response.json()
+
+        if (response.ok && result.messages) {
+          // Count messages that have responses but haven't been marked as read
+          // For now, we'll consider any message with a response as having an unread response
+          // In a more sophisticated system, we'd track when the borrower last viewed their messages
+          const responsesCount = result.messages.filter((m: any) => 
+            m.response && m.status === 'resolved'
+          ).length
+          setUnreadResponseCount(responsesCount)
+        }
+      } catch (error) {
+        console.error("Error fetching message responses:", error)
+      }
+    }
+
     fetchUnreadCount()
+    fetchUnreadResponses()
     
-    // Refresh count every 30 seconds
-    const interval = setInterval(fetchUnreadCount, 30000)
-    return () => clearInterval(interval)
+    // Listen for messages viewed event
+    const handleMessagesViewed = () => {
+      setUnreadResponseCount(0)
+    }
+    
+    window.addEventListener('messagesViewed', handleMessagesViewed)
+    
+    // Refresh counts every 30 seconds
+    const interval = setInterval(() => {
+      fetchUnreadCount()
+      fetchUnreadResponses()
+    }, 30000)
+    
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('messagesViewed', handleMessagesViewed)
+    }
   }, [user])
 
   const handleLogout = async () => {
@@ -56,7 +93,7 @@ export function BorrowerLayout({ children }: BorrowerLayoutProps) {
     { label: "Payments", href: "/payments", icon: "💳" },
     { label: "Documents", href: "/documents", icon: "📄" },
     { label: "Notifications", href: "/notifications", icon: "🔔", badge: unreadCount },
-    { label: "Support", href: "/support", icon: "💬" },
+    { label: "Support", href: "/support", icon: "💬", badge: unreadResponseCount },
   ]
 
   const isActive = (href: string) => pathname === href

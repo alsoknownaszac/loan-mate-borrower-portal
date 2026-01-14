@@ -1,22 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { requireBorrowerAuth } from "@/lib/auth/borrower-server"
 
 export async function GET(request: NextRequest) {
   try {
-    // Create client with service role key for data access (bypasses RLS)
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    // Get authenticated borrower
+    const { borrower } = await requireBorrowerAuth()
 
-    // For now, let's use a fallback approach that works when logged in
-    const testUserId = "60edebce-61ac-4003-a9af-726446b9923d" // my name is jeff
+    const supabaseAdmin = createAdminClient()
 
     // Fetch document requests using service role key (bypasses RLS)
     const { data: documentRequests, error } = await supabaseAdmin
       .from("document_requests")
       .select("*")
-      .eq("borrower_id", testUserId)
+      .eq("borrower_id", borrower.id)
       .order("created_at", { ascending: false })
 
     if (error) {
@@ -31,7 +28,7 @@ export async function GET(request: NextRequest) {
     const { data: documents, error: documentsError } = await supabaseAdmin
       .from("documents")
       .select("*")
-      .eq("borrower_id", testUserId)
+      .eq("borrower_id", borrower.id)
       .order("created_at", { ascending: false })
 
     if (documentsError) {
@@ -50,6 +47,14 @@ export async function GET(request: NextRequest) {
 
   } catch (error: any) {
     console.error("API error:", error)
+    
+    if (error.message === "Authentication required" || error.message === "Borrower not found") {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      )
+    }
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

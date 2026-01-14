@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { createClient } from "@/lib/supabase/client"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 
@@ -48,27 +47,25 @@ export default function BorrowerProfilePage() {
   const [borrower, setBorrower] = useState<BorrowerProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<"overview" | "loans" | "payments" | "documents" | "notifications">("overview")
-  const supabase = createClient()
 
   useEffect(() => {
     const fetchBorrowerProfile = async () => {
       if (!params.id) return
 
       try {
-        const { data, error } = await supabase
-          .from("borrowers")
-          .select(`
-            *,
-            loans (*),
-            documents (*),
-            payments (*),
-            notifications (*)
-          `)
-          .eq("id", params.id)
-          .single()
+        const response = await fetch(`/api/admin/borrowers/${params.id}`)
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
 
-        if (error) throw error
-        setBorrower(data)
+        const result = await response.json()
+        
+        if (!result.success) {
+          throw new Error(result.error || "Failed to fetch borrower")
+        }
+
+        setBorrower(result.borrower)
       } catch (error) {
         console.error("Error fetching borrower profile:", error)
         router.push("/admin/borrowers")
@@ -78,7 +75,7 @@ export default function BorrowerProfilePage() {
     }
 
     fetchBorrowerProfile()
-  }, [params.id, supabase, router])
+  }, [params.id, router])
 
   const handleSendNotification = async () => {
     const title = prompt("Notification title:")
@@ -88,16 +85,28 @@ export default function BorrowerProfilePage() {
     if (!message) return
 
     try {
-      const { error } = await supabase
-        .from("notifications")
-        .insert({
-          borrower_id: borrower?.id,
+      const response = await fetch(`/api/admin/borrowers/${borrower?.id}/notify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'custom',
           title,
-          message,
-          notification_type: "info"
+          message
         })
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const result = await response.json()
+      
+      if (!result.success) {
+        throw new Error(result.error || "Failed to send notification")
+      }
+
       alert("Notification sent successfully!")
       
       // Refresh data

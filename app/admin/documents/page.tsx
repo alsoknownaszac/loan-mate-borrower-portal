@@ -45,36 +45,20 @@ export default function AdminDocumentsPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch documents
-        const { data: docsData, error: docsError } = await supabase
-          .from("documents")
-          .select(`
-            *,
-            borrowers (
-              full_name,
-              email
-            )
-          `)
-          .order("upload_date", { ascending: false })
-
-        if (docsError) throw docsError
-
-        // Fetch document requests
-        const { data: requestsData, error: requestsError } = await supabase
-          .from("document_requests")
-          .select(`
-            *,
-            borrowers (
-              full_name,
-              email
-            )
-          `)
-          .order("created_at", { ascending: false })
-
-        if (requestsError) throw requestsError
-
-        setDocuments(docsData || [])
-        setDocumentRequests(requestsData || [])
+        const response = await fetch('/api/admin/documents')
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        
+        const result = await response.json()
+        
+        if (result.success) {
+          setDocuments(result.documents || [])
+          setDocumentRequests(result.documentRequests || [])
+        } else {
+          throw new Error(result.error || 'Failed to fetch documents')
+        }
       } catch (error) {
         console.error("Error fetching documents:", error)
       } finally {
@@ -83,19 +67,30 @@ export default function AdminDocumentsPage() {
     }
 
     fetchData()
-  }, [supabase])
+  }, [])
 
   const handleApproveDocument = async (documentId: string) => {
     try {
-      const { error } = await supabase
-        .from("documents")
-        .update({
+      const response = await fetch(`/api/admin/documents/${documentId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           status: "approved",
           approved_at: new Date().toISOString()
         })
-        .eq("id", documentId)
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const result = await response.json()
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to approve document')
+      }
 
       // Update local state
       setDocuments(prev => prev.map(doc => 
@@ -104,9 +99,29 @@ export default function AdminDocumentsPage() {
           : doc
       ))
 
-      // Create notification for borrower
+      // Update any related document request to completed
       const document = documents.find(d => d.id === documentId)
       if (document) {
+        // Update document request status to completed
+        await fetch('/api/admin/documents/request/complete', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            documentId: documentId
+          })
+        })
+
+        // Update local document requests state
+        setDocumentRequests(prev => prev.map(req => 
+          req.borrowers?.email === document.borrowers?.email && 
+          req.document_type === document.document_type
+            ? { ...req, status: "completed" }
+            : req
+        ))
+
+        // Create notification for borrower
         await supabase
           .from("notifications")
           .insert({
@@ -129,15 +144,26 @@ export default function AdminDocumentsPage() {
     if (!reason) return
 
     try {
-      const { error } = await supabase
-        .from("documents")
-        .update({
+      const response = await fetch(`/api/admin/documents/${documentId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           status: "rejected",
           rejection_reason: reason
         })
-        .eq("id", documentId)
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const result = await response.json()
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to reject document')
+      }
 
       // Update local state
       setDocuments(prev => prev.map(doc => 
@@ -146,9 +172,29 @@ export default function AdminDocumentsPage() {
           : doc
       ))
 
-      // Create notification for borrower
+      // Update any related document request back to pending for resubmission
       const document = documents.find(d => d.id === documentId)
       if (document) {
+        // Update document request status back to pending
+        await fetch('/api/admin/documents/request/reset', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            documentId: documentId
+          })
+        })
+
+        // Update local document requests state
+        setDocumentRequests(prev => prev.map(req => 
+          req.borrowers?.email === document.borrowers?.email && 
+          req.document_type === document.document_type
+            ? { ...req, status: "pending" }
+            : req
+        ))
+
+        // Create notification for borrower
         await supabase
           .from("notifications")
           .insert({
@@ -169,13 +215,18 @@ export default function AdminDocumentsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "approved":
+      case "completed":
         return "bg-green-100 text-green-800"
       case "rejected":
         return "bg-red-100 text-red-800"
       case "pending":
         return "bg-yellow-100 text-yellow-800"
-      case "requested":
+      case "submitted":
         return "bg-blue-100 text-blue-800"
+      case "requested":
+        return "bg-purple-100 text-purple-800"
+      case "overdue":
+        return "bg-orange-100 text-orange-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
@@ -247,9 +298,9 @@ export default function AdminDocumentsPage() {
           </p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-sm text-muted-foreground mb-1">Active Requests</p>
+          <p className="text-sm text-muted-foreground mb-1">Document Requests</p>
           <p className="text-2xl font-bold text-blue-600">
-            {documentRequests.filter(r => r.status === 'pending').length}
+            {documentRequests.length}
           </p>
         </div>
       </div>
@@ -275,7 +326,7 @@ export default function AdminDocumentsPage() {
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            Document Requests ({documentRequests.filter(r => r.status === 'pending').length})
+            Document Requests ({documentRequests.length})
           </button>
         </nav>
       </div>

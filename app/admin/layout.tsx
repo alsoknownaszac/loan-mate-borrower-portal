@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 import { getAdminUser } from "@/lib/auth/admin-server"
-import AdminLayout from "@/components/admin/admin-layout"
+import { AdminResponsiveLayout } from "@/components/admin/admin-responsive-layout"
 
 export default async function AdminLayoutWrapper({
   children,
@@ -19,9 +19,9 @@ export default async function AdminLayoutWrapper({
     }
 
     return (
-      <AdminLayout adminUser={adminUser}>
+      <AdminResponsiveLayout adminUser={adminUser}>
         {children}
-      </AdminLayout>
+      </AdminResponsiveLayout>
     )
   } catch (error) {
     console.error("Admin authentication error:", error)

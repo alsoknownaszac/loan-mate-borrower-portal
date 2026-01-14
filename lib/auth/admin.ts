@@ -11,12 +11,16 @@ export function hasPermission(userRole: string, requiredPermission: string): boo
     admin: [
       'create_borrowers', 'manage_loans', 'confirm_payments', 
       'review_documents', 'respond_messages', 'system_settings',
-      'view_all', 'edit_all', 'delete_all'
+      'view_all', 'edit_all', 'delete_all',
+      // Add specific view permissions for admin
+      'view_borrowers', 'view_loans', 'view_payments', 'view_documents'
     ],
     manager: [
       'create_borrowers', 'manage_loans', 'confirm_payments', 
       'review_documents', 'respond_messages',
-      'view_all', 'edit_all'
+      'view_all', 'edit_all',
+      // Add specific view permissions for manager
+      'view_borrowers', 'view_loans', 'view_payments', 'view_documents'
     ],
     support: [
       'view_borrowers', 'view_loans', 'view_payments', 
