@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { useUser } from "@/hooks/use-user"
 import { createClient } from "@/lib/supabase/client"
 
@@ -14,6 +15,7 @@ interface Notification {
 }
 
 export function NotificationsContent() {
+  const router = useRouter()
   const { user, loading: userLoading } = useUser()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
@@ -22,13 +24,23 @@ export function NotificationsContent() {
 
   useEffect(() => {
     const fetchNotifications = async () => {
-      if (!user) return
+      // Check if user exists first
+      if (!user) {
+        console.log("No user session found")
+        setLoading(false)
+        return
+      }
 
       try {
         const response = await fetch("/api/borrower/notifications")
         const result = await response.json()
 
         if (!response.ok) {
+          // If unauthorized, redirect to login
+          if (response.status === 401) {
+            router.push("/auth/login")
+            return
+          }
           throw new Error(result.error || "Failed to fetch notifications")
         }
 
@@ -47,7 +59,7 @@ export function NotificationsContent() {
       // User is not loading and no user found
       setLoading(false)
     }
-  }, [user, userLoading])
+  }, [user, userLoading, router])
 
   const markAsRead = async (notificationId: string) => {
     try {
@@ -57,7 +69,7 @@ export function NotificationsContent() {
 
       if (response.ok) {
         setNotifications(prev => 
-          prev.map(n => 
+          prev.map(n =>
             n.id === notificationId ? { ...n, is_read: true } : n
           )
         )

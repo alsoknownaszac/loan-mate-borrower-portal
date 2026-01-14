@@ -19,6 +19,7 @@ export function MobileLayout({ children }: MobileAppLayoutProps) {
   const [unreadCount, setUnreadCount] = useState(0)
   const [unreadResponseCount, setUnreadResponseCount] = useState(0)
   const [showProfileSheet, setShowProfileSheet] = useState(false)
+  const [showMoreSheet, setShowMoreSheet] = useState(false)
   const supabase = createClient()
 
   // Fetch unread notification count and message responses
@@ -141,7 +142,7 @@ export function MobileLayout({ children }: MobileAppLayoutProps) {
     },
     { 
       label: "More", 
-      href: "/support", 
+      href: "#more", 
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
@@ -157,8 +158,8 @@ export function MobileLayout({ children }: MobileAppLayoutProps) {
   ]
 
   const isActive = (href: string) => {
-    if (href === "/support") {
-      return pathname === "/support" || pathname === "/notifications"
+    if (href === "#more") {
+      return showMoreSheet
     }
     return pathname === href
   }
@@ -220,7 +221,32 @@ export function MobileLayout({ children }: MobileAppLayoutProps) {
         <div className="flex justify-around items-center py-2">
           {tabItems.map((item) => {
             const active = isActive(item.href)
-            return (
+            return item.href === "#more" ? (
+              <button
+                key={item.href}
+                onClick={() => setShowMoreSheet(true)}
+                className={`flex flex-col items-center justify-center py-2 px-3 min-w-[60px] relative ${
+                  active 
+                    ? "text-blue-600" 
+                    : "text-gray-500"
+                }`}
+              >
+                <div className="relative mb-1">
+                  {active ? item.activeIcon : item.icon}
+                  {item.badge && item.badge > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center font-medium shadow-lg">
+                      {item.badge > 99 ? "99+" : item.badge}
+                    </span>
+                  )}
+                </div>
+                <span className={`text-xs font-medium ${active ? 'text-blue-600' : 'text-gray-500'}`}>
+                  {item.label}
+                </span>
+                {active && (
+                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-blue-600 rounded-full"></div>
+                )}
+              </button>
+            ) : (
               <Link
                 key={item.href}
                 href={item.href}
@@ -249,6 +275,75 @@ export function MobileLayout({ children }: MobileAppLayoutProps) {
           })}
         </div>
       </nav>
+
+      {/* More Bottom Sheet */}
+      {showMoreSheet && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40" 
+            onClick={() => setShowMoreSheet(false)}
+          />
+          
+          {/* Bottom Sheet */}
+          <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-50 animate-slide-up safe-area-bottom">
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-10 h-1 bg-gray-300 rounded-full"></div>
+            </div>
+            
+            {/* More Content */}
+            <div className="px-6 pb-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">More Options</h3>
+
+              {/* Navigation Items */}
+              <div className="space-y-3">
+                <Link
+                  href="/notifications"
+                  onClick={() => setShowMoreSheet(false)}
+                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"
+                >
+                  <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM11 19H7a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v4" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">Notifications</p>
+                    <p className="text-sm text-gray-600">View all notifications</p>
+                  </div>
+                  {unreadCount > 0 && (
+                    <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                      {unreadCount}
+                    </span>
+                  )}
+                </Link>
+
+                <Link
+                  href="/support"
+                  onClick={() => setShowMoreSheet(false)}
+                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"
+                >
+                  <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">Support</p>
+                    <p className="text-sm text-gray-600">Get help and support</p>
+                  </div>
+                  {unreadResponseCount > 0 && (
+                    <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                      {unreadResponseCount}
+                    </span>
+                  )}
+                </Link>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Profile Bottom Sheet */}
       {showProfileSheet && (
@@ -283,47 +378,28 @@ export function MobileLayout({ children }: MobileAppLayoutProps) {
 
               {/* Quick Actions */}
               <div className="space-y-3 mb-6">
-                <Link
-                  href="/notifications"
-                  onClick={() => setShowProfileSheet(false)}
-                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"
+                <button
+                  onClick={() => {
+                    setShowProfileSheet(false)
+                    setShowMoreSheet(true)
+                  }}
+                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl w-full"
                 >
                   <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
                     <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM11 19H7a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v4" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                     </svg>
                   </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">Notifications</p>
-                    <p className="text-sm text-gray-600">View all notifications</p>
+                  <div className="flex-1 text-left">
+                    <p className="font-medium text-gray-900">More Options</p>
+                    <p className="text-sm text-gray-600">Notifications, Support & More</p>
                   </div>
-                  {unreadCount > 0 && (
+                  {(unreadCount + unreadResponseCount) > 0 && (
                     <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
-                      {unreadCount}
+                      {unreadCount + unreadResponseCount}
                     </span>
                   )}
-                </Link>
-
-                <Link
-                  href="/support"
-                  onClick={() => setShowProfileSheet(false)}
-                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"
-                >
-                  <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">Support</p>
-                    <p className="text-sm text-gray-600">Get help and support</p>
-                  </div>
-                  {unreadResponseCount > 0 && (
-                    <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
-                      {unreadResponseCount}
-                    </span>
-                  )}
-                </Link>
+                </button>
               </div>
 
               {/* Logout Button */}
@@ -345,7 +421,7 @@ export function MobileLayout({ children }: MobileAppLayoutProps) {
       )}
 
       {/* Live Chat Button - Positioned for mobile */}
-      <div className="fixed bottom-24 right-4 z-30">
+      <div className="fixed bottom-28 right-4 z-30">
         <ChatButton />
       </div>
     </div>

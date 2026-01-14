@@ -247,7 +247,9 @@ export function BorrowerLayout({ children }: BorrowerLayoutProps) {
       </nav>
 
       {/* Live Chat Button */}
-      <ChatButton />
+      <div className="fixed bottom-4 right-4 z-30">
+        <ChatButton />
+      </div>
     </div>
   )
 }

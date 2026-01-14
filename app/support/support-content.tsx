@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { useUser } from "@/hooks/use-user"
 
 interface FAQItem {
   question: string
@@ -9,6 +11,8 @@ interface FAQItem {
 }
 
 export function SupportContent() {
+  const router = useRouter()
+  const { user } = useUser()
   const [activeTab, setActiveTab] = useState("help")
   const [expandedFAQ, setExpandedFAQ] = useState<string | null>(null)
   const [contactForm, setContactForm] = useState({
@@ -23,9 +27,23 @@ export function SupportContent() {
 
   // Fetch borrower's messages
   const fetchMessages = async () => {
+    // Check if user exists first
+    if (!user) {
+      console.log("No user session found")
+      return
+    }
+
     setLoadingMessages(true)
     try {
       const response = await fetch('/api/borrower/messages')
+      
+      if (!response.ok) {
+        // If unauthorized, redirect to login
+        if (response.status === 401) {
+          router.push("/auth/login")
+          return
+        }
+      }
       
       if (response.ok) {
         const result = await response.json()
@@ -46,10 +64,10 @@ export function SupportContent() {
 
   // Fetch messages when component mounts or when switching to messages tab
   useEffect(() => {
-    if (activeTab === "messages") {
+    if (activeTab === "messages" && user) {
       fetchMessages()
     }
-  }, [activeTab])
+  }, [activeTab, user])
 
   const faqItems: FAQItem[] = [
     {

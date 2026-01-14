@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { useUser } from "@/hooks/use-user"
 import { ResponsiveCard, ResponsiveStatCard, ResponsiveActionCard } from "@/components/ui/responsive-card"
 
@@ -25,6 +26,7 @@ interface RecentActivity {
 }
 
 export function DashboardContent() {
+  const router = useRouter()
   const { user, loading: userLoading } = useUser()
   const [stats, setStats] = useState<DashboardStats>({
     totalLoans: 0,
@@ -42,20 +44,41 @@ export function DashboardContent() {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
-      if (!user) return
+      // Check if user exists first
+      if (!user) {
+        console.log("No user session found")
+        setLoading(false)
+        return
+      }
 
       try {
         // Fetch loans
         const loansResponse = await fetch("/api/borrower/loans")
         const loansResult = await loansResponse.json()
         
+        // Check for auth errors
+        if (!loansResponse.ok && loansResponse.status === 401) {
+          router.push("/auth/login")
+          return
+        }
+        
         // Fetch payments
         const paymentsResponse = await fetch("/api/borrower/payments")
         const paymentsResult = await paymentsResponse.json()
         
+        if (!paymentsResponse.ok && paymentsResponse.status === 401) {
+          router.push("/auth/login")
+          return
+        }
+        
         // Fetch documents
         const documentsResponse = await fetch("/api/borrower/documents")
         const documentsResult = await documentsResponse.json()
+
+        if (!documentsResponse.ok && documentsResponse.status === 401) {
+          router.push("/auth/login")
+          return
+        }
 
         if (loansResponse.ok && paymentsResponse.ok && documentsResponse.ok) {
           const loans = loansResult.loans || []

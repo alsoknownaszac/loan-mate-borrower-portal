@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { requireAdminAuth } from "@/lib/auth/admin-server"
+import { emailService } from "@/lib/resend/email-service"
 
 // Create admin client with service role key
 const supabaseAdmin = createAdminClient()
@@ -77,6 +78,38 @@ export async function POST(request: NextRequest) {
         notification_type: "success",
         is_read: false
       })
+
+    // Send welcome email with login credentials
+    try {
+      // Get organization name from admin's organization
+      const { data: adminData } = await supabaseAdmin.auth.getUser()
+      let organizationName = "LoanMate"
+      
+      if (adminData?.user) {
+        const { data: adminUser } = await supabaseAdmin
+          .from("admin_users")
+          .select("organization_id, organizations(name)")
+          .eq("id", adminData.user.id)
+          .single()
+        
+        if (adminUser?.organizations) {
+          organizationName = (adminUser.organizations as any).name
+        }
+      }
+
+      const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/login`
+      
+      await emailService.sendBorrowerWelcomeEmail({
+        to: email,
+        borrowerName: full_name,
+        organizationName,
+        loginUrl,
+        temporaryPassword: password
+      })
+    } catch (emailError) {
+      console.error("Failed to send welcome email:", emailError)
+      // Don't fail the borrower creation if email fails
+    }
 
     return NextResponse.json({
       success: true,

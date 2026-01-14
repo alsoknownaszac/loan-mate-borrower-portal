@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
+import { AlertDialogProvider } from "@/components/ui/alert-dialog"
 
 import { Archivo as V0_Font_Archivo, Geist_Mono as V0_Font_Geist_Mono, Exo_2 as V0_Font_Exo_2 } from 'next/font/google'
 
@@ -42,7 +43,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans antialiased`}>
-        {children}
+        <AlertDialogProvider>
+          {children}
+        </AlertDialogProvider>
         <Analytics />
       </body>
     </html>

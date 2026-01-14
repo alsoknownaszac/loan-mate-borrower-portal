@@ -1,9 +1,9 @@
 "use client"
 
 import React, { useState } from "react"
+import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("")
@@ -114,6 +114,11 @@ export default function AdminLoginPage() {
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 required
               />
+              <div className="text-right mt-2">
+                <Link href="/auth/forgot-password" className="text-sm text-primary hover:text-primary/80">
+                  Forgot password?
+                </Link>
+              </div>
             </div>
 
             {/* Error Message */}

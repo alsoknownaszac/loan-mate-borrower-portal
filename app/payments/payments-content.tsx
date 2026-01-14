@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { useUser } from "@/hooks/use-user"
 import { PaymentCard, PaymentSummaryCard } from "@/components/ui/mobile-payment-card"
 import { MobileCard } from "@/components/ui/mobile-card"
@@ -22,6 +23,7 @@ interface Payment {
 }
 
 export function PaymentsContent() {
+  const router = useRouter()
   const { user, loading: userLoading } = useUser()
   const [payments, setPayments] = useState<Payment[]>([])
   const [loading, setLoading] = useState(true)
@@ -36,13 +38,23 @@ export function PaymentsContent() {
 
   useEffect(() => {
     const fetchPayments = async () => {
-      if (!user) return
+      // Check if user exists first
+      if (!user) {
+        console.log("No user session found")
+        setLoading(false)
+        return
+      }
 
       try {
         const response = await fetch("/api/borrower/payments")
         const result = await response.json()
 
         if (!response.ok) {
+          // If unauthorized, redirect to login
+          if (response.status === 401) {
+            router.push("/auth/login")
+            return
+          }
           throw new Error(result.error || "Failed to fetch payments")
         }
 

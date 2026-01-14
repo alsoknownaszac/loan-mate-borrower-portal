@@ -3,7 +3,11 @@
 import { useState } from "react"
 import { LiveChat } from "./live-chat"
 
-export function ChatButton() {
+interface ChatButtonProps {
+  className?: string
+}
+
+export function ChatButton({ className = "" }: ChatButtonProps) {
   const [isChatOpen, setIsChatOpen] = useState(false)
 
   // Check if chat is available (business hours simulation)
@@ -26,11 +30,11 @@ export function ChatButton() {
       {/* Chat Button */}
       <button
         onClick={() => setIsChatOpen(true)}
-        className={`fixed bottom-4 right-4 w-14 h-14 rounded-full shadow-lg transition-all duration-300 hover:scale-110 z-40 ${
+        className={`w-14 h-14 rounded-full shadow-lg transition-all duration-300 hover:scale-110 z-40 ${
           available 
             ? "bg-blue-600 hover:bg-blue-700 text-white" 
             : "bg-gray-400 text-gray-200 cursor-not-allowed"
-        }`}
+        } ${className}`}
         disabled={!available}
         title={available ? "Start live chat" : "Chat unavailable (Mon-Fri 9AM-5PM EST)"}
       >

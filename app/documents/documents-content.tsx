@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { useUser } from "@/hooks/use-user"
 import { validateFile, formatFileSize, getFileIcon } from "@/lib/storage/documents"
 
@@ -24,6 +25,7 @@ interface Document {
 }
 
 export function DocumentsContent() {
+  const router = useRouter()
   const { user, loading: userLoading } = useUser()
   const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([])
   const [documents, setDocuments] = useState<Document[]>([])
@@ -33,13 +35,23 @@ export function DocumentsContent() {
 
   useEffect(() => {
     const fetchDocuments = async () => {
-      if (!user) return
+      // Check if user exists first
+      if (!user) {
+        console.log("No user session found")
+        setLoading(false)
+        return
+      }
 
       try {
         const response = await fetch("/api/borrower/documents")
         const result = await response.json()
 
         if (!response.ok) {
+          // If unauthorized, redirect to login
+          if (response.status === 401) {
+            router.push("/auth/login")
+            return
+          }
           throw new Error(result.error || "Failed to fetch documents")
         }
 

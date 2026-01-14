@@ -1,9 +1,35 @@
 import { createResendClient, getFromEmail } from './client'
 import { 
+  getBorrowerWelcomeEmailTemplate,
+  getPasswordResetEmailTemplate,
+  getOrganizationVerificationEmailTemplate,
   getLoanCreatedEmailTemplate, 
   getPaymentReminderEmailTemplate, 
   getDocumentRequestEmailTemplate 
 } from './templates'
+
+interface SendBorrowerWelcomeEmailProps {
+  to: string
+  borrowerName: string
+  organizationName: string
+  loginUrl: string
+  temporaryPassword: string
+}
+
+interface SendPasswordResetEmailProps {
+  to: string
+  userName: string
+  resetUrl: string
+  expiresInHours?: number
+}
+
+interface SendOrganizationVerificationEmailProps {
+  to: string
+  adminName: string
+  organizationName: string
+  verificationUrl: string
+  expiresInHours?: number
+}
 
 interface SendLoanCreatedEmailProps {
   to: string
@@ -37,6 +63,97 @@ interface SendDocumentRequestEmailProps {
 export class EmailService {
   private resend = createResendClient()
   private fromEmail = getFromEmail()
+
+  async sendBorrowerWelcomeEmail({
+    to,
+    borrowerName,
+    organizationName,
+    loginUrl,
+    temporaryPassword
+  }: SendBorrowerWelcomeEmailProps) {
+    try {
+      const { subject, html, text } = getBorrowerWelcomeEmailTemplate({
+        borrowerName,
+        organizationName,
+        loginUrl,
+        temporaryPassword
+      })
+
+      const result = await this.resend.emails.send({
+        from: this.fromEmail,
+        to: [to],
+        subject,
+        html,
+        text
+      })
+
+      console.log('Borrower welcome email sent successfully:', result)
+      return { success: true, messageId: result.data?.id }
+    } catch (error) {
+      console.error('Failed to send borrower welcome email:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  }
+
+  async sendPasswordResetEmail({
+    to,
+    userName,
+    resetUrl,
+    expiresInHours = 1
+  }: SendPasswordResetEmailProps) {
+    try {
+      const { subject, html, text } = getPasswordResetEmailTemplate({
+        userName,
+        resetUrl,
+        expiresInHours
+      })
+
+      const result = await this.resend.emails.send({
+        from: this.fromEmail,
+        to: [to],
+        subject,
+        html,
+        text
+      })
+
+      console.log('Password reset email sent successfully:', result)
+      return { success: true, messageId: result.data?.id }
+    } catch (error) {
+      console.error('Failed to send password reset email:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  }
+
+  async sendOrganizationVerificationEmail({
+    to,
+    adminName,
+    organizationName,
+    verificationUrl,
+    expiresInHours = 24
+  }: SendOrganizationVerificationEmailProps) {
+    try {
+      const { subject, html, text } = getOrganizationVerificationEmailTemplate({
+        adminName,
+        organizationName,
+        verificationUrl,
+        expiresInHours
+      })
+
+      const result = await this.resend.emails.send({
+        from: this.fromEmail,
+        to: [to],
+        subject,
+        html,
+        text
+      })
+
+      console.log('Organization verification email sent successfully:', result)
+      return { success: true, messageId: result.data?.id }
+    } catch (error) {
+      console.error('Failed to send organization verification email:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  }
 
   async sendLoanCreatedEmail({
     to,
