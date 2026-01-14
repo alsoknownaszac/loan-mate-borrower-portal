@@ -55,16 +55,21 @@ function AdminLoginForm() {
       }
 
       if (data.user) {
-        // Check if user is an admin
+        console.log("User authenticated:", data.user.id, data.user.email)
+        
+        // Check if user is an admin using their user ID
         const { data: adminUser, error: adminError } = await supabase
           .from('admin_users')
           .select('*')
-          .eq('email', email)
+          .eq('id', data.user.id)
           .eq('is_active', true)
           .single()
 
+        console.log("Admin user query result:", { adminUser, adminError })
+
         if (adminError || !adminUser) {
           setError("Access denied. Admin privileges required.")
+          console.error("Admin check failed:", adminError)
           await supabase.auth.signOut()
           return
         }
