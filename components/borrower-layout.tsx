@@ -94,6 +94,7 @@ export function BorrowerLayout({ children }: BorrowerLayoutProps) {
     { label: "Documents", href: "/documents", icon: "📄" },
     { label: "Notifications", href: "/notifications", icon: "🔔", badge: unreadCount },
     { label: "Support", href: "/support", icon: "💬", badge: unreadResponseCount },
+    { label: "Settings", href: "/settings", icon: "⚙️" },
   ]
 
   const isActive = (href: string) => pathname === href

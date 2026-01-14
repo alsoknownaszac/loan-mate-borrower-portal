@@ -156,7 +156,10 @@ function AdminLoginForm() {
             {/* Success Message */}
             {successMessage && (
               <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
-                {successMessage}
+                <p className="mb-1">{successMessage}</p>
+                <p className="text-xs text-green-600">
+                  💡 If you didn't receive the email, check your spam folder
+                </p>
               </div>
             )}
 

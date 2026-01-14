@@ -154,8 +154,11 @@ export default function SetupPage() {
           </p>
           
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-blue-800">
+            <p className="text-sm text-blue-800 mb-2">
               Click the verification link in your email to activate your account and access the admin dashboard.
+            </p>
+            <p className="text-xs text-blue-700">
+              💡 <strong>Tip:</strong> If you don't see the email in your inbox, please check your spam or junk folder.
             </p>
           </div>
 
@@ -165,7 +168,7 @@ export default function SetupPage() {
             </div>
           )}
 
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 mb-2">
             Didn't receive the email? Check your spam folder or{" "}
             <button 
               onClick={handleResendEmail}
@@ -174,6 +177,9 @@ export default function SetupPage() {
             >
               {loading ? "Sending..." : "resend verification email"}
             </button>
+          </p>
+          <p className="text-xs text-gray-400">
+            💡 Emails sometimes end up in spam or junk folders
           </p>
         </div>
       </div>
