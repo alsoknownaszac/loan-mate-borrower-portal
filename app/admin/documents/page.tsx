@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import Link from "next/link"
+import { useAlertDialog } from "@/components/ui/alert-dialog"
 
 interface Document {
   id: string
@@ -35,6 +36,7 @@ interface DocumentRequest {
 }
 
 export default function AdminDocumentsPage() {
+  const { showAlert } = useAlertDialog()
   const [documents, setDocuments] = useState<Document[]>([])
   const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([])
   const [loading, setLoading] = useState(true)
@@ -132,10 +134,10 @@ export default function AdminDocumentsPage() {
           })
       }
 
-      alert("Document approved successfully!")
+      await showAlert("Document approved successfully!", "Success")
     } catch (error) {
       console.error("Error approving document:", error)
-      alert("Failed to approve document")
+      await showAlert("Failed to approve document", "Error")
     }
   }
 
@@ -205,10 +207,10 @@ export default function AdminDocumentsPage() {
           })
       }
 
-      alert("Document rejected and borrower notified")
+      await showAlert("Document rejected and borrower notified", "Success")
     } catch (error) {
       console.error("Error rejecting document:", error)
-      alert("Failed to reject document")
+      await showAlert("Failed to reject document", "Error")
     }
   }
 

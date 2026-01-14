@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
+import { NotificationModal } from "@/components/notification-modal"
+import { DeleteConfirmationModal } from "@/components/delete-confirmation-modal"
 
 interface BorrowerProfile {
   id: string
@@ -47,6 +49,9 @@ export default function BorrowerProfilePage() {
   const [borrower, setBorrower] = useState<BorrowerProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<"overview" | "loans" | "payments" | "documents" | "notifications">("overview")
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [notificationSuccess, setNotificationSuccess] = useState(false)
 
   useEffect(() => {
     const fetchBorrowerProfile = async () => {
@@ -77,13 +82,7 @@ export default function BorrowerProfilePage() {
     fetchBorrowerProfile()
   }, [params.id, router])
 
-  const handleSendNotification = async () => {
-    const title = prompt("Notification title:")
-    if (!title) return
-
-    const message = prompt("Notification message:")
-    if (!message) return
-
+  const handleSendNotification = async (title: string, message: string) => {
     try {
       const response = await fetch(`/api/admin/borrowers/${borrower?.id}/notify`, {
         method: 'POST',
@@ -107,13 +106,45 @@ export default function BorrowerProfilePage() {
         throw new Error(result.error || "Failed to send notification")
       }
 
-      alert("Notification sent successfully!")
+      // Show success message
+      setNotificationSuccess(true)
+      setTimeout(() => setNotificationSuccess(false), 3000)
       
       // Refresh data
-      window.location.reload()
+      const refreshResponse = await fetch(`/api/admin/borrowers/${params.id}`)
+      if (refreshResponse.ok) {
+        const refreshResult = await refreshResponse.json()
+        if (refreshResult.success) {
+          setBorrower(refreshResult.borrower)
+        }
+      }
     } catch (error) {
       console.error("Error sending notification:", error)
-      alert("Failed to send notification")
+      throw error
+    }
+  }
+
+  const handleDeleteBorrower = async () => {
+    try {
+      const response = await fetch(`/api/admin/borrowers/${borrower?.id}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const result = await response.json()
+      
+      if (!result.success) {
+        throw new Error(result.error || "Failed to delete borrower")
+      }
+
+      // Redirect to borrowers list
+      router.push("/admin/borrowers")
+    } catch (error) {
+      console.error("Error deleting borrower:", error)
+      throw error
     }
   }
 
@@ -146,6 +177,34 @@ export default function BorrowerProfilePage() {
 
   return (
     <div className="space-y-6">
+      {/* Success Message */}
+      {notificationSuccess && (
+        <div className="fixed top-4 right-4 z-50 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-top">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          Notification sent successfully!
+        </div>
+      )}
+
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={isNotificationModalOpen}
+        onClose={() => setIsNotificationModalOpen(false)}
+        onSend={handleSendNotification}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDeleteBorrower}
+        title="Delete Borrower"
+        message="Are you sure you want to delete this borrower? This action cannot be undone."
+        itemName={borrower?.full_name}
+        warningMessage="⚠️ This will permanently delete the borrower and all associated loans, payments, documents, and notifications."
+      />
+
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link
@@ -162,17 +221,32 @@ export default function BorrowerProfilePage() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={handleSendNotification}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            onClick={() => setIsNotificationModalOpen(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
           >
-            📧 Send Notification
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            Send Notification
           </button>
           <Link
             href={`/admin/loans/create?borrower=${borrower.id}`}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
           >
-            ➕ Create Loan
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Create Loan
           </Link>
+          <button
+            onClick={() => setIsDeleteModalOpen(true)}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Delete
+          </button>
         </div>
       </div>
 

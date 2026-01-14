@@ -4,6 +4,7 @@ import React, { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { useAlertDialog } from "@/components/ui/alert-dialog"
 
 interface BorrowerRow {
   full_name: string
@@ -13,6 +14,7 @@ interface BorrowerRow {
 }
 
 export default function BulkUploadBorrowersPage() {
+  const { showAlert } = useAlertDialog()
   const [csvData, setCsvData] = useState("")
   const [parsedData, setParsedData] = useState<BorrowerRow[]>([])
   const [uploading, setUploading] = useState(false)
@@ -146,7 +148,7 @@ Bob Johnson,bob@example.com,+1-555-0125,TempPass789!`
         }
       }
 
-      alert(message)
+      await showAlert(message, "Upload Complete")
 
       if (successCount > 0) {
         router.push("/admin/borrowers")

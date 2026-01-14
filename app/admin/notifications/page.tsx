@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { useAlertDialog } from "@/components/ui/alert-dialog"
 
 interface Notification {
   id: string
@@ -33,6 +34,7 @@ interface SendNotificationForm {
 }
 
 export default function AdminNotificationsPage() {
+  const { showAlert } = useAlertDialog()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [templates, setTemplates] = useState<NotificationTemplate[]>([])
   const [borrowers, setBorrowers] = useState<any[]>([])
@@ -88,7 +90,7 @@ export default function AdminNotificationsPage() {
 
   const handleSendNotification = async () => {
     if (!sendForm.title.trim() || !sendForm.message.trim() || sendForm.borrower_ids.length === 0) {
-      alert("Please fill in all required fields and select at least one borrower")
+      await showAlert("Please fill in all required fields and select at least one borrower", "Error")
       return
     }
 
@@ -117,7 +119,7 @@ export default function AdminNotificationsPage() {
         throw new Error(result.error || 'Failed to send notifications')
       }
 
-      alert(`Notification sent to ${result.count} borrower(s) successfully!`)
+      await showAlert(`Notification sent to ${result.count} borrower(s) successfully!`, "Success")
       
       // Reset form
       setSendForm({
@@ -131,7 +133,7 @@ export default function AdminNotificationsPage() {
       window.location.reload()
     } catch (error) {
       console.error("Error sending notification:", error)
-      alert("Failed to send notification")
+      await showAlert("Failed to send notification", "Error")
     } finally {
       setSending(false)
     }

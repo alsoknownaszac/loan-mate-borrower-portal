@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { requireAdminAuth } from "@/lib/auth/admin-server"
 
+const supabaseAdmin = createAdminClient()
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -22,7 +24,6 @@ export async function GET(
       )
     }
 
-    const supabaseAdmin = createAdminClient()
     const borrowerId = id
 
     console.log("Fetching borrower with ID:", borrowerId)
@@ -78,6 +79,85 @@ export async function GET(
 
     return NextResponse.json(
       { error: "Internal server error", details: error.message },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    // Verify admin authentication
+    await requireAdminAuth()
+
+    // Await the params
+    const { id } = await params
+    const borrowerId = id
+
+    if (!borrowerId || borrowerId === 'undefined') {
+      return NextResponse.json(
+        { error: "Borrower ID is required" },
+        { status: 400 }
+      )
+    }
+
+    // Check if borrower exists
+    const { data: borrower, error: fetchError } = await supabaseAdmin
+      .from("borrowers")
+      .select("id, email, full_name")
+      .eq("id", borrowerId)
+      .single()
+
+    if (fetchError || !borrower) {
+      return NextResponse.json(
+        { error: "Borrower not found" },
+        { status: 404 }
+      )
+    }
+
+    // Delete the borrower (cascade will handle loans, payments, documents, etc.)
+    const { error: deleteError } = await supabaseAdmin
+      .from("borrowers")
+      .delete()
+      .eq("id", borrowerId)
+
+    if (deleteError) {
+      console.error("Error deleting borrower:", deleteError)
+      return NextResponse.json(
+        { error: "Failed to delete borrower" },
+        { status: 500 }
+      )
+    }
+
+    // Delete the auth user
+    const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(borrowerId)
+
+    if (authDeleteError) {
+      console.error("Error deleting auth user:", authDeleteError)
+      // Don't fail the request if auth deletion fails, borrower is already deleted
+    }
+
+    console.log(`✅ Borrower deleted: ${borrower.full_name} (${borrower.email})`)
+
+    return NextResponse.json({
+      success: true,
+      message: "Borrower and all associated data deleted successfully"
+    })
+
+  } catch (error: any) {
+    console.error("API error:", error)
+    
+    if (error.message === "Admin authentication required") {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      )
+    }
+
+    return NextResponse.json(
+      { error: "Internal server error" },
       { status: 500 }
     )
   }

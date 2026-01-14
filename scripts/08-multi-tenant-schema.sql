@@ -125,17 +125,14 @@ CREATE POLICY "Admins can update their organization"
   );
 
 -- 17. Update RLS policies for admin_users to include organization isolation
+-- Note: We keep a simple policy that allows all authenticated users to check if they're an admin
+-- This is needed for the login flow to work properly
 DROP POLICY IF EXISTS "Admins can view other admins" ON public.admin_users;
-CREATE POLICY "Admins can view admins in their organization"
+DROP POLICY IF EXISTS "admin_users_select_all" ON public.admin_users;
+CREATE POLICY "admin_users_select_all"
   ON public.admin_users
   FOR SELECT
-  USING (
-    organization_id IN (
-      SELECT organization_id 
-      FROM public.admin_users 
-      WHERE id = auth.uid()
-    )
-  );
+  USING (true);
 
 -- 18. Update RLS policies for borrowers to include organization isolation
 DROP POLICY IF EXISTS "Admins can view all borrowers" ON public.borrowers;

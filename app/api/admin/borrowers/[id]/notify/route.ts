@@ -66,6 +66,71 @@ export async function POST(
 
       notification = notificationData
 
+      // Send email notification
+      const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/login`
+      
+      try {
+        const emailResult = await emailService.sendCustomEmail({
+          to: borrower.email,
+          subject: title,
+          html: `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>${title}</title>
+              <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+                .message-box { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea; }
+                .cta-button { display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }
+                .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 14px; }
+              </style>
+            </head>
+            <body>
+              <div class="header">
+                <h1>📬 ${title}</h1>
+              </div>
+              
+              <div class="content">
+                <p>Hi <strong>${borrower.full_name}</strong>,</p>
+                
+                <div class="message-box">
+                  <p>${message.replace(/\n/g, '<br>')}</p>
+                </div>
+                
+                <div style="text-align: center;">
+                  <a href="${loginUrl}" class="cta-button">🔐 Login to Your Portal</a>
+                </div>
+                
+                <p style="margin-top: 30px;">If you have any questions, please contact us through your borrower portal.</p>
+              </div>
+              
+              <div class="footer">
+                <p>This email was sent by LoanMate Loan Management System</p>
+              </div>
+            </body>
+            </html>
+          `,
+          text: `
+            ${title}
+            
+            Hi ${borrower.full_name},
+            
+            ${message}
+            
+            Login to your portal: ${loginUrl}
+          `
+        })
+
+        console.log(emailResult.success ? "✅ Email sent successfully" : "❌ Email failed:", emailResult.error)
+      } catch (emailError) {
+        console.error("❌ Exception sending email:", emailError)
+        // Don't fail the notification if email fails
+      }
+
       return NextResponse.json({
         success: true,
         message: "Custom notification sent successfully",

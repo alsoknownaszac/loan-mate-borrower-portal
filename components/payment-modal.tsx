@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useAlertDialog } from "@/components/ui/alert-dialog"
 
 interface PaymentModalProps {
   isOpen: boolean
@@ -19,6 +20,7 @@ interface PaymentModalProps {
 }
 
 export function PaymentModal({ isOpen, onClose, payment, onPaymentSubmit }: PaymentModalProps) {
+  const { showAlert } = useAlertDialog()
   const [paymentMethod, setPaymentMethod] = useState("")
   const [paymentReference, setPaymentReference] = useState("")
   const [proofOfPaymentUrl, setProofOfPaymentUrl] = useState("")
@@ -30,7 +32,7 @@ export function PaymentModal({ isOpen, onClose, payment, onPaymentSubmit }: Paym
     e.preventDefault()
     
     if (!paymentMethod) {
-      alert("Please select a payment method")
+      await showAlert("Please select a payment method", "Validation Error")
       return
     }
 

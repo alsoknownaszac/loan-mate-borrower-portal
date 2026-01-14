@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import Link from "next/link"
+import { useAlertDialog } from "@/components/ui/alert-dialog"
 
 interface Message {
   id: string
@@ -22,6 +23,7 @@ interface Message {
 }
 
 export default function AdminMessagesPage() {
+  const { showAlert } = useAlertDialog()
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState("all")
@@ -108,10 +110,10 @@ export default function AdminMessagesPage() {
 
       setSelectedMessage(null)
       setResponseText("")
-      alert("Response sent successfully!")
+      await showAlert("Response sent successfully!", "Success")
     } catch (error) {
       console.error("Error sending response:", error)
-      alert("Failed to send response")
+      await showAlert("Failed to send response", "Error")
     } finally {
       setResponding(false)
     }

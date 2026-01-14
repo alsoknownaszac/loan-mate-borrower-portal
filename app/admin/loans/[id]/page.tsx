@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
+import { useAlertDialog } from "@/components/ui/alert-dialog"
 
 interface LoanDetail {
   id: string
@@ -48,6 +49,7 @@ interface AdminNote {
 }
 
 export default function LoanDetailPage() {
+  const { showAlert } = useAlertDialog()
   const params = useParams()
   const router = useRouter()
   const [loan, setLoan] = useState<LoanDetail | null>(null)
@@ -121,10 +123,10 @@ export default function LoanDetailPage() {
 
       setEditingPaymentDate(null)
       setNewPaymentDate("")
-      alert("Payment date updated successfully!")
+      await showAlert("Payment date updated successfully!", "Success")
     } catch (error) {
       console.error("Error updating payment date:", error)
-      alert("Failed to update payment date")
+      await showAlert("Failed to update payment date", "Error")
     }
   }
 
@@ -147,10 +149,13 @@ export default function LoanDetailPage() {
         throw new Error(result.error || "Failed to send login link")
       }
 
-      alert(`Login link sent to ${loan?.borrowers.full_name}! They can access their loan at: ${result.loginUrl}`)
+      await showAlert(
+        `Login link sent to ${loan?.borrowers.full_name}! They can access their loan at: ${result.loginUrl}`,
+        "Success"
+      )
     } catch (error) {
       console.error("Error sending login link:", error)
-      alert("Failed to send login link")
+      await showAlert("Failed to send login link", "Error")
     }
   }
 
@@ -180,10 +185,10 @@ export default function LoanDetailPage() {
       // Create notification for borrower (this would need its own API route)
       // For now, just update the local state
       setLoan(prev => prev ? { ...prev, status: "completed", remaining_balance: 0 } : null)
-      alert("Loan closed successfully!")
+      await showAlert("Loan closed successfully!", "Success")
     } catch (error) {
       console.error("Error closing loan:", error)
-      alert("Failed to close loan")
+      await showAlert("Failed to close loan", "Error")
     }
   }
 
@@ -202,10 +207,10 @@ export default function LoanDetailPage() {
 
       setAdminNotes(prev => [note, ...prev])
       setNewNote("")
-      alert("Note added successfully!")
+      await showAlert("Note added successfully!", "Success")
     } catch (error) {
       console.error("Error adding note:", error)
-      alert("Failed to add note")
+      await showAlert("Failed to add note", "Error")
     } finally {
       setAddingNote(false)
     }

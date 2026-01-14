@@ -6,6 +6,7 @@ import { useUser } from "@/hooks/use-user"
 import { PaymentCard, PaymentSummaryCard } from "@/components/ui/mobile-payment-card"
 import { MobileCard } from "@/components/ui/mobile-card"
 import { PaymentModal } from "@/components/payment-modal"
+import { useAlertDialog } from "@/components/ui/alert-dialog"
 
 interface Payment {
   id: string
@@ -23,6 +24,7 @@ interface Payment {
 }
 
 export function PaymentsContent() {
+  const { showAlert } = useAlertDialog()
   const router = useRouter()
   const { user, loading: userLoading } = useUser()
   const [payments, setPayments] = useState<Payment[]>([])
@@ -102,7 +104,7 @@ export function PaymentsContent() {
         throw new Error(result.error || 'Payment submission failed')
       }
 
-      alert(`Payment submitted successfully! ${result.message}`)
+      await showAlert(`Payment submitted successfully! ${result.message}`, "Success")
       
       // Refresh payments data
       const refreshResponse = await fetch("/api/borrower/payments")
@@ -111,7 +113,7 @@ export function PaymentsContent() {
         setPayments(refreshResult.payments || [])
       }
     } catch (error: any) {
-      alert(`Payment submission failed: ${error.message}`)
+      await showAlert(`Payment submission failed: ${error.message}`, "Error")
       throw error
     }
   }

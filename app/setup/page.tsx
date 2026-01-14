@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { useAlertDialog } from "@/components/ui/alert-dialog"
 
 export default function SetupPage() {
   const router = useRouter()
+  const { showAlert } = useAlertDialog()
   const [step, setStep] = useState<'check' | 'form' | 'verify' | 'complete'>('check')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -129,7 +131,7 @@ export default function SetupPage() {
         // Show success message
         setError("") // Clear any previous errors
         // You could add a success state here if you want
-        alert("✓ Verification email resent! Please check your inbox.")
+        await showAlert("✓ Verification email resent! Please check your inbox.", "Success")
       } catch (error: any) {
         setError(error.message || "Failed to resend verification email")
       } finally {

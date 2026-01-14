@@ -4,6 +4,7 @@ import React, { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { useAlertDialog } from "@/components/ui/alert-dialog"
 
 interface BorrowerFormData {
   email: string
@@ -13,6 +14,7 @@ interface BorrowerFormData {
 }
 
 export default function CreateBorrowerPage() {
+  const { showAlert } = useAlertDialog()
   const [formData, setFormData] = useState<BorrowerFormData>({
     email: "",
     full_name: "",
@@ -60,7 +62,10 @@ export default function CreateBorrowerPage() {
         return
       }
 
-      alert(`Borrower created successfully!\n\nLogin credentials:\nEmail: ${result.credentials.email}\nPassword: ${result.credentials.password}\n\nPlease share these credentials securely with the borrower.`)
+      await showAlert(
+        `Borrower created successfully!\n\nLogin credentials:\nEmail: ${result.credentials.email}\nPassword: ${result.credentials.password}\n\nPlease share these credentials securely with the borrower.`,
+        "Success"
+      )
       router.push("/admin/borrowers")
 
     } catch (err) {

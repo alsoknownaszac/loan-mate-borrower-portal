@@ -30,13 +30,6 @@ function AdminLoginForm() {
     }
   }, [searchParams])
 
-  // Debug: Check environment variables
-  React.useEffect(() => {
-    console.log("🔍 Environment Debug:")
-    console.log("SUPABASE_URL:", process.env.NEXT_PUBLIC_SUPABASE_URL)
-    console.log("ANON_KEY (first 50):", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 50))
-  }, [])
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
@@ -55,21 +48,38 @@ function AdminLoginForm() {
       }
 
       if (data.user) {
-        console.log("User authenticated:", data.user.id, data.user.email)
+        // Check if email is confirmed
+        if (!data.user.email_confirmed_at) {
+          setError("Please verify your email before logging in. Check your inbox for the verification link.")
+          await supabase.auth.signOut()
+          return
+        }
         
         // Check if user is an admin using their user ID
         const { data: adminUser, error: adminError } = await supabase
           .from('admin_users')
           .select('*')
           .eq('id', data.user.id)
-          .eq('is_active', true)
-          .single()
+          .maybeSingle()
 
-        console.log("Admin user query result:", { adminUser, adminError })
+        // Handle database errors
+        if (adminError) {
+          console.error("Database error checking admin:", adminError)
+          setError("Database error. Please try again or contact support.")
+          await supabase.auth.signOut()
+          return
+        }
 
-        if (adminError || !adminUser) {
-          setError("Access denied. Admin privileges required.")
-          console.error("Admin check failed:", adminError)
+        // Check if user has admin privileges
+        if (!adminUser) {
+          setError("Access denied. This account does not have admin privileges.")
+          await supabase.auth.signOut()
+          return
+        }
+
+        // Check if admin account is active
+        if (!adminUser.is_active) {
+          setError("Your admin account has been deactivated. Please contact support.")
           await supabase.auth.signOut()
           return
         }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useUser } from "@/hooks/use-user"
 import { validateFile, formatFileSize, getFileIcon } from "@/lib/storage/documents"
+import { useAlertDialog } from "@/components/ui/alert-dialog"
 
 interface DocumentRequest {
   id: string
@@ -27,6 +28,7 @@ interface Document {
 export function DocumentsContent() {
   const router = useRouter()
   const { user, loading: userLoading } = useUser()
+  const { showAlert } = useAlertDialog()
   const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([])
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
@@ -74,7 +76,7 @@ export function DocumentsContent() {
 
   const handleViewDocument = async (document: Document) => {
     if (!document.file_url) {
-      alert('Document file not available')
+      await showAlert('Document file not available', 'Error')
       return
     }
 
@@ -116,7 +118,7 @@ export function DocumentsContent() {
     // Validate file first
     const validation = validateFile(file)
     if (!validation.valid) {
-      alert(validation.error)
+      await showAlert(validation.error || 'Invalid file', 'Error')
       return
     }
 
@@ -147,7 +149,7 @@ export function DocumentsContent() {
         throw new Error(result.error || 'Upload failed')
       }
 
-      alert(`File "${file.name}" uploaded successfully!`)
+      await showAlert(`File "${file.name}" uploaded successfully!`, 'Success')
       
       // Refresh the data
       const refreshResponse = await fetch("/api/borrower/documents")
@@ -158,7 +160,7 @@ export function DocumentsContent() {
       }
     } catch (error: any) {
       console.error("Upload error:", error)
-      alert(`Upload failed: ${error.message}`)
+      await showAlert(`Upload failed: ${error.message}`, 'Error')
     } finally {
       setUploading(null)
     }

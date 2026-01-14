@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import Link from "next/link"
+import { useAlertDialog } from "@/components/ui/alert-dialog"
 
 interface Payment {
   id: string
@@ -27,6 +28,7 @@ interface Payment {
 }
 
 export default function AdminPaymentsPage() {
+  const { showAlert } = useAlertDialog()
   const [payments, setPayments] = useState<Payment[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState("all")
@@ -110,10 +112,10 @@ export default function AdminPaymentsPage() {
           })
       }
 
-      alert("Payment confirmed successfully!")
+      await showAlert("Payment confirmed successfully!", "Success")
     } catch (error) {
       console.error("Error confirming payment:", error)
-      alert("Failed to confirm payment")
+      await showAlert("Failed to confirm payment", "Error")
     } finally {
       setConfirmingPayment(null)
     }
@@ -164,10 +166,10 @@ export default function AdminPaymentsPage() {
           })
       }
 
-      alert("Payment rejected and borrower notified")
+      await showAlert("Payment rejected and borrower notified", "Success")
     } catch (error) {
       console.error("Error rejecting payment:", error)
-      alert("Failed to reject payment")
+      await showAlert("Failed to reject payment", "Error")
     }
   }
 

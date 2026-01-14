@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
+import { useAlertDialog } from "@/components/ui/alert-dialog"
 
 interface Borrower {
   id: string
@@ -20,6 +21,7 @@ interface LoanFormData {
 }
 
 export default function CreateLoanPage() {
+  const { showAlert } = useAlertDialog()
   const [borrowers, setBorrowers] = useState<Borrower[]>([])
   const [formData, setFormData] = useState<LoanFormData>({
     borrower_id: "",
@@ -129,7 +131,10 @@ export default function CreateLoanPage() {
       const emailStatus = result.emailSent ? "✅ Email sent successfully!" : "⚠️ Email failed to send"
       const borrowerEmail = result.borrowerEmail ? ` to ${result.borrowerEmail}` : ""
       
-      alert(`Loan created successfully! ${emailStatus}${borrowerEmail}\n\nBorrower can login at: ${loginUrl}`)
+      await showAlert(
+        `Loan created successfully! ${emailStatus}${borrowerEmail}\n\nBorrower can login at: ${loginUrl}`,
+        "Success"
+      )
       router.push(`/admin/loans/${result.loan.id}`)
 
     } catch (err: any) {

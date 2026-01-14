@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useUser } from "@/hooks/use-user"
+import { useAlertDialog } from "@/components/ui/alert-dialog"
 
 interface FAQItem {
   question: string
@@ -13,6 +14,7 @@ interface FAQItem {
 export function SupportContent() {
   const router = useRouter()
   const { user } = useUser()
+  const { showAlert } = useAlertDialog()
   const [activeTab, setActiveTab] = useState("help")
   const [expandedFAQ, setExpandedFAQ] = useState<string | null>(null)
   const [contactForm, setContactForm] = useState({
@@ -126,7 +128,7 @@ export function SupportContent() {
     e.preventDefault()
     
     if (!contactForm.subject || !contactForm.category || !contactForm.message) {
-      alert("Please fill in all required fields")
+      await showAlert("Please fill in all required fields", "Error")
       return
     }
 
@@ -156,7 +158,7 @@ export function SupportContent() {
         throw new Error(result.error || 'Failed to submit message')
       }
       
-      alert("Support request submitted successfully! We'll get back to you within 24 hours.")
+      await showAlert("Support request submitted successfully! We'll get back to you within 24 hours.", "Success")
       
       // Reset form
       setContactForm({
@@ -170,7 +172,7 @@ export function SupportContent() {
       fetchMessages()
     } catch (error) {
       console.error("Error submitting support request:", error)
-      alert("Failed to submit support request. Please try again.")
+      await showAlert("Failed to submit support request. Please try again.", "Error")
     } finally {
       setSubmitting(false)
     }
@@ -344,13 +346,13 @@ export function SupportContent() {
                     <p className="text-sm text-purple-800 mb-1">Available on website</p>
                     <p className="text-xs text-purple-600 mb-3">Mon-Fri: 9AM-5PM EST</p>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         // Check if chat button exists and trigger it
                         const chatButton = document.querySelector('[title*="Start live chat"]') as HTMLButtonElement
                         if (chatButton && !chatButton.disabled) {
                           chatButton.click()
                         } else {
-                          alert('Live chat is currently unavailable. Please try during business hours (Mon-Fri 9AM-5PM EST) or use our contact form.')
+                          await showAlert('Live chat is currently unavailable. Please try during business hours (Mon-Fri 9AM-5PM EST) or use our contact form.', 'Live Chat Unavailable')
                         }
                       }}
                       className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"

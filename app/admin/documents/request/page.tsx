@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
+import { useAlertDialog } from "@/components/ui/alert-dialog"
 
 interface Borrower {
   id: string
@@ -19,6 +20,7 @@ interface DocumentRequestForm {
 }
 
 export default function RequestDocumentPage() {
+  const { showAlert } = useAlertDialog()
   const [borrowers, setBorrowers] = useState<Borrower[]>([])
   const [formData, setFormData] = useState<DocumentRequestForm>({
     borrower_id: "",
@@ -122,7 +124,7 @@ export default function RequestDocumentPage() {
       }
 
       const borrower = borrowers.find(b => b.id === formData.borrower_id)
-      alert(`Document request sent to ${borrower?.full_name} successfully!`)
+      await showAlert(`Document request sent to ${borrower?.full_name} successfully!`, "Success")
       router.push("/admin/documents")
 
     } catch (err: any) {

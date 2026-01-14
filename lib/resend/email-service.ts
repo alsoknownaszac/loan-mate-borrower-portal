@@ -1,4 +1,5 @@
 import { createResendClient, getFromEmail } from './client'
+import { gmailSMTPService } from '../email/gmail-smtp'
 import { 
   getBorrowerWelcomeEmailTemplate,
   getPasswordResetEmailTemplate,
@@ -7,6 +8,9 @@ import {
   getPaymentReminderEmailTemplate, 
   getDocumentRequestEmailTemplate 
 } from './templates'
+
+// Determine which email provider to use
+const EMAIL_PROVIDER = process.env.EMAIL_PROVIDER || 'resend'
 
 interface SendBorrowerWelcomeEmailProps {
   to: string
@@ -72,12 +76,30 @@ export class EmailService {
     temporaryPassword
   }: SendBorrowerWelcomeEmailProps) {
     try {
+      // Use Gmail SMTP if configured
+      if (EMAIL_PROVIDER === 'gmail') {
+        console.log('📧 Using Gmail SMTP for welcome email')
+        return await gmailSMTPService.sendBorrowerWelcomeEmail({
+          to,
+          borrowerName,
+          organizationName,
+          loginUrl,
+          temporaryPassword
+        })
+      }
+
+      // Otherwise use Resend
+      console.log('📧 Using Resend for welcome email')
       const { subject, html, text } = getBorrowerWelcomeEmailTemplate({
         borrowerName,
         organizationName,
         loginUrl,
         temporaryPassword
       })
+
+      console.log('📧 Sending welcome email to:', to)
+      console.log('📧 From:', this.fromEmail)
+      console.log('📧 Subject:', subject)
 
       const result = await this.resend.emails.send({
         from: this.fromEmail,
@@ -87,10 +109,14 @@ export class EmailService {
         text
       })
 
-      console.log('Borrower welcome email sent successfully:', result)
+      console.log('✅ Borrower welcome email sent successfully:', result)
       return { success: true, messageId: result.data?.id }
     } catch (error) {
-      console.error('Failed to send borrower welcome email:', error)
+      console.error('❌ Failed to send borrower welcome email:', error)
+      if (error instanceof Error) {
+        console.error('Error message:', error.message)
+        console.error('Error stack:', error.stack)
+      }
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   }
@@ -102,6 +128,19 @@ export class EmailService {
     expiresInHours = 1
   }: SendPasswordResetEmailProps) {
     try {
+      // Use Gmail SMTP if configured
+      if (EMAIL_PROVIDER === 'gmail') {
+        console.log('📧 Using Gmail SMTP for password reset email')
+        return await gmailSMTPService.sendPasswordResetEmail({
+          to,
+          userName,
+          resetUrl,
+          expiresInHours
+        })
+      }
+
+      // Otherwise use Resend (fallback)
+      console.log('📧 Using Resend for password reset email')
       const { subject, html, text } = getPasswordResetEmailTemplate({
         userName,
         resetUrl,
@@ -116,10 +155,10 @@ export class EmailService {
         text
       })
 
-      console.log('Password reset email sent successfully:', result)
+      console.log('✅ Password reset email sent successfully:', result)
       return { success: true, messageId: result.data?.id }
     } catch (error) {
-      console.error('Failed to send password reset email:', error)
+      console.error('❌ Failed to send password reset email:', error)
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   }
@@ -132,6 +171,20 @@ export class EmailService {
     expiresInHours = 24
   }: SendOrganizationVerificationEmailProps) {
     try {
+      // Use Gmail SMTP if configured
+      if (EMAIL_PROVIDER === 'gmail') {
+        console.log('📧 Using Gmail SMTP for organization verification email')
+        return await gmailSMTPService.sendOrganizationVerificationEmail({
+          to,
+          adminName,
+          organizationName,
+          verificationUrl,
+          expiresInHours
+        })
+      }
+
+      // Otherwise use Resend (fallback)
+      console.log('📧 Using Resend for organization verification email')
       const { subject, html, text } = getOrganizationVerificationEmailTemplate({
         adminName,
         organizationName,
@@ -147,10 +200,10 @@ export class EmailService {
         text
       })
 
-      console.log('Organization verification email sent successfully:', result)
+      console.log('✅ Organization verification email sent successfully:', result)
       return { success: true, messageId: result.data?.id }
     } catch (error) {
-      console.error('Failed to send organization verification email:', error)
+      console.error('❌ Failed to send organization verification email:', error)
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   }
@@ -166,6 +219,23 @@ export class EmailService {
     loginUrl
   }: SendLoanCreatedEmailProps) {
     try {
+      // Use Gmail SMTP if configured
+      if (EMAIL_PROVIDER === 'gmail') {
+        console.log('📧 Using Gmail SMTP for loan created email')
+        return await gmailSMTPService.sendLoanCreatedEmail({
+          to,
+          borrowerName,
+          loanAmount,
+          monthlyPayment,
+          loanTermMonths,
+          interestRate,
+          startDate,
+          loginUrl
+        })
+      }
+
+      // Otherwise use Resend (fallback)
+      console.log('📧 Using Resend for loan created email')
       const { subject, html, text } = getLoanCreatedEmailTemplate({
         borrowerName,
         loanAmount,
@@ -184,10 +254,10 @@ export class EmailService {
         text
       })
 
-      console.log('Loan created email sent successfully:', result)
+      console.log('✅ Loan created email sent successfully:', result)
       return { success: true, messageId: result.data?.id }
     } catch (error) {
-      console.error('Failed to send loan created email:', error)
+      console.error('❌ Failed to send loan created email:', error)
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   }
@@ -201,6 +271,21 @@ export class EmailService {
     loginUrl
   }: SendPaymentReminderEmailProps) {
     try {
+      // Use Gmail SMTP if configured
+      if (EMAIL_PROVIDER === 'gmail') {
+        console.log('📧 Using Gmail SMTP for payment reminder email')
+        return await gmailSMTPService.sendPaymentReminderEmail({
+          to,
+          borrowerName,
+          paymentAmount,
+          dueDate,
+          loanId,
+          loginUrl
+        })
+      }
+
+      // Otherwise use Resend (fallback)
+      console.log('📧 Using Resend for payment reminder email')
       const { subject, html, text } = getPaymentReminderEmailTemplate({
         borrowerName,
         paymentAmount,
@@ -217,10 +302,10 @@ export class EmailService {
         text
       })
 
-      console.log('Payment reminder email sent successfully:', result)
+      console.log('✅ Payment reminder email sent successfully:', result)
       return { success: true, messageId: result.data?.id }
     } catch (error) {
-      console.error('Failed to send payment reminder email:', error)
+      console.error('❌ Failed to send payment reminder email:', error)
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   }
@@ -270,6 +355,14 @@ export class EmailService {
     text?: string
   }) {
     try {
+      // Use Gmail SMTP if configured
+      if (EMAIL_PROVIDER === 'gmail') {
+        console.log('📧 Using Gmail SMTP for custom email')
+        return await gmailSMTPService.sendCustomEmail({ to, subject, html, text })
+      }
+
+      // Otherwise use Resend
+      console.log('📧 Using Resend for custom email')
       const result = await this.resend.emails.send({
         from: this.fromEmail,
         to: [to],
@@ -278,10 +371,10 @@ export class EmailService {
         text
       })
 
-      console.log('Custom email sent successfully:', result)
+      console.log('✅ Custom email sent successfully:', result)
       return { success: true, messageId: result.data?.id }
     } catch (error) {
-      console.error('Failed to send custom email:', error)
+      console.error('❌ Failed to send custom email:', error)
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   }
