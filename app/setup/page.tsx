@@ -109,6 +109,34 @@ export default function SetupPage() {
   }
 
   if (step === 'verify') {
+    const handleResendEmail = async () => {
+      setLoading(true)
+      setError("")
+      
+      try {
+        const response = await fetch("/api/setup/resend", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ adminEmail: formData.adminEmail })
+        })
+
+        const result = await response.json()
+
+        if (!response.ok) {
+          throw new Error(result.error || "Failed to resend email")
+        }
+
+        // Show success message
+        setError("") // Clear any previous errors
+        // You could add a success state here if you want
+        alert("✓ Verification email resent! Please check your inbox.")
+      } catch (error: any) {
+        setError(error.message || "Failed to resend verification email")
+      } finally {
+        setLoading(false)
+      }
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
@@ -129,10 +157,20 @@ export default function SetupPage() {
             </p>
           </div>
 
+          {error && (
+            <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+          )}
+
           <p className="text-sm text-gray-500">
             Didn't receive the email? Check your spam folder or{" "}
-            <button className="text-indigo-600 hover:text-indigo-800 font-medium">
-              resend verification email
+            <button 
+              onClick={handleResendEmail}
+              disabled={loading}
+              className="text-indigo-600 hover:text-indigo-800 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? "Sending..." : "resend verification email"}
             </button>
           </p>
         </div>
